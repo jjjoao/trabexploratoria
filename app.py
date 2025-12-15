@@ -85,30 +85,29 @@ if df is not None:
         ---
         """)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.info("### 📂 Sobre o Banco de Dados")
-            st.markdown(f"""
-            * **Total de Registros:** {len(df_unique):,} músicas únicas.
-            * **Período:** De 1991 a 2020.
-            * **Fonte:** API do Spotify.
-            """)
-            
-        with col2:
-            st.warning("### 📖 Dicionário de Variáveis")
-            st.markdown("""
-            * **Danceability:** O quão adequada a música é para dançar.
-            * **Energy:** Medida de intensidade.
-            * **Valence:** Positividade (Alto = Feliz, Baixo = Triste).
-            * **Acousticness:** Se a música é acústica.
-            * **Popularity:** Índice de 0 a 100 (reprodução atual).
-            """)
+        st.warning("### 📖 Dicionário de Variáveis do Banco de Dados")
+        st.markdown("""
+        Abaixo estão as descrições de todas as variáveis utilizadas nesta análise:
+
+        * **Danceability (Dançabilidade):** Descreve o quão adequada uma música é para dançar (0.0 a 1.0).
+        * **Energy (Energia):** Medida de intensidade e atividade. Músicas rápidas e barulhentas têm alta energia.
+        * **Valence (Positividade):** Descreve a positividade musical. Alto = Feliz/Eufórico, Baixo = Triste/Depressivo.
+        * **Acousticness (Acústico):** Nível de confiança de que a faixa é acústica (sem instrumentos elétricos/eletrônicos).
+        * **Instrumentalness (Instrumental):** Probabilidade da música não conter vocais (apenas instrumentos).
+        * **Speechiness (Fala):** Detecta a presença de palavras faladas. Valores altos indicam talk-shows ou rap denso.
+        * **Loudness (Volume):** O volume médio da faixa em decibéis (dB).
+        * **Tempo (BPM):** Velocidade da música em batidas por minuto.
+        * **Popularity (Popularidade):** Índice de 0 a 100 calculado pelo Spotify baseado no número de reproduções recentes.
+        * **Duration_ms (Duração):** Duração da música em milissegundos.
+        * **Mode (Modo/Tonalidade):** Indica a escala da música (Maior = geralmente alegre, Menor = geralmente sério).
+        * **Playlist Genre:** O gênero principal da playlist onde a música foi encontrada.
+        """)
 
     # --- PÁGINA 2: DASHBOARD ---
     elif pagina == "📊 Dashboard de Análise":
         st.title("📊 Dashboard Analítico")
 
-        # As 5 Abas (4 Originais + 1 Nova)
+        # As 5 Abas
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📉 Estatísticas Gerais", 
             "🎸 Gêneros", 
@@ -191,14 +190,14 @@ if df is not None:
             fig_pop_line.add_vline(x=2010.5, line_dash="dash", line_color="gray")
             st.plotly_chart(fig_pop_line, use_container_width=True)
 
-        # --- ABA 5: FERRAMENTA DE TESTES (NOVA) ---
+        # --- ABA 5: FERRAMENTA DE TESTES (ATUALIZADA) ---
         with tab5:
-            st.header("🧪 Teste de Hipótese")
+            st.header("🧪 Teste de Hipótese (Comparação)")
             st.markdown("Compare duas décadas para verificar se a diferença é estatisticamente significativa (Significância de 5%).")
             st.divider()
 
             tipo_teste = st.radio("Tipo de Variável:", 
-                                ["Numérica", "Categórica"], 
+                                ["Numérica (ex: Energia, Duração)", "Categórica (ex: Gênero, Tonalidade)"], 
                                 horizontal=True)
 
             col_a, col_b = st.columns(2)
@@ -214,12 +213,26 @@ if df is not None:
 
                 # --- LÓGICA NUMÉRICA (MÉDIAS) ---
                 if "Numérica" in tipo_teste:
-                    vars_num = ['danceability', 'energy', 'valence', 'acousticness', 'instrumentalness', 'speechiness', 'track_popularity', 'duration_ms', 'loudness', 'tempo']
-                    variavel = st.selectbox("Variável", vars_num)
+                    # Mapa para tradução dos nomes
+                    mapa_variaveis_num = {
+                        "Dançabilidade": "danceability",
+                        "Energia": "energy",
+                        "Positividade (Valence)": "valence",
+                        "Acústico": "acousticness",
+                        "Instrumental": "instrumentalness",
+                        "Fala (Speechiness)": "speechiness",
+                        "Popularidade": "track_popularity",
+                        "Duração (ms)": "duration_ms",
+                        "Volume (Loudness)": "loudness",
+                        "Tempo (BPM)": "tempo"
+                    }
+                    
+                    variavel_display = st.selectbox("Variável", list(mapa_variaveis_num.keys()))
+                    variavel_interna = mapa_variaveis_num[variavel_display]
 
                     if st.button("Calcular Teste t"):
-                        d1 = df_d1[variavel].dropna()
-                        d2 = df_d2[variavel].dropna()
+                        d1 = df_d1[variavel_interna].dropna()
+                        d2 = df_d2[variavel_interna].dropna()
                         stat, p_val = ttest_ind(d1, d2, equal_var=False)
                         
                         m1, m2 = d1.mean(), d2.mean()
@@ -227,25 +240,37 @@ if df is not None:
                         col1.metric(f"Média {decada_1}", f"{m1:.4f}")
                         col2.metric(f"Média {decada_2}", f"{m2:.4f}", delta=f"{m2-m1:.4f}")
                         
-                        st.markdown(f"**Valor-p:** `{p_val:.10f}`")
+                        st.markdown("### Interpretação do Resultado")
+                        
                         if p_val < 0.05:
-                            st.success(f"✅ Diferença Significativa! A média mudou de forma real.")
+                            direcao = "aumentou" if m2 > m1 else "diminuiu"
+                            st.success(f"✅ **Diferença Significativa!**")
+                            st.write(f'Dado um p-valor de `{p_val:.10f}` (que é menor que 0.05), **rejeitamos a hipótese nula** de igualdade entre as médias.')
+                            st.write(f'Isso indica estatisticamente que a **{variavel_display}** **{direcao}** quando comparamos o período **{decada_1}** com o período **{decada_2}**.')
                         else:
-                            st.warning("❌ Sem diferença estatística significativa.")
+                            st.warning("❌ **Sem Diferença Significativa.**")
+                            st.write(f'Dado um p-valor de `{p_val:.4f}` (que é maior que 0.05), **falhamos em rejeitar a hipótese nula**.')
+                            st.write(f'Isso significa que não há evidência estatística suficiente para afirmar que a **{variavel_display}** mudou entre **{decada_1}** e **{decada_2}**. A diferença observada pode ser fruto do acaso.')
 
                 # --- LÓGICA CATEGÓRICA (PROPORÇÕES) ---
                 else:
-                    vars_cat = ['playlist_genre', 'playlist_subgenre', 'mode_categoria']
-                    variavel_cat = st.selectbox("Categoria", vars_cat)
-                    # Para gêneros, usamos o dataframe completo (df) pois a playlist define o gênero
-                    # Para Mode, usamos df_unique. Vamos usar df_unique por padrão para consistência.
-                    valores = sorted(df_unique[variavel_cat].dropna().unique().astype(str))
-                    alvo = st.selectbox(f"Valor a testar em '{variavel_cat}'", valores)
+                    # Mapa para tradução das categorias
+                    mapa_variaveis_cat = {
+                        "Gênero da Playlist": "playlist_genre",
+                        "Subgênero": "playlist_subgenre",
+                        "Tonalidade (Modo)": "mode_categoria"
+                    }
+
+                    variavel_cat_display = st.selectbox("Categoria", list(mapa_variaveis_cat.keys()))
+                    variavel_cat_interna = mapa_variaveis_cat[variavel_cat_display]
+                    
+                    valores = sorted(df_unique[variavel_cat_interna].dropna().unique().astype(str))
+                    alvo = st.selectbox(f"Valor específico a testar em '{variavel_cat_display}'", valores)
 
                     if st.button("Calcular Teste de Proporção"):
-                        count1 = len(df_d1[df_d1[variavel_cat].astype(str) == alvo])
+                        count1 = len(df_d1[df_d1[variavel_cat_interna].astype(str) == alvo])
                         total1 = len(df_d1)
-                        count2 = len(df_d2[df_d2[variavel_cat].astype(str) == alvo])
+                        count2 = len(df_d2[df_d2[variavel_cat_interna].astype(str) == alvo])
                         total2 = len(df_d2)
 
                         z_stat, p_val, p1, p2 = z_test_proportions(count1, total1, count2, total2)
@@ -254,12 +279,16 @@ if df is not None:
                         col1.metric(f"% em {decada_1}", f"{p1:.2%}", help=f"{count1}/{total1}")
                         col2.metric(f"% em {decada_2}", f"{p2:.2%}", delta=f"{(p2-p1)*100:.2f} p.p.")
                         
-                        st.markdown(f"**Valor-p:** `{p_val:.10f}`")
+                        st.markdown("### Interpretação do Resultado")
+                        
                         if p_val < 0.05:
-                            tendencia = "aumentou" if p2 > p1 else "diminuiu"
-                            st.success(f"✅ Mudança Significativa! A proporção de **{alvo}** {tendencia}.")
+                            direcao = "aumentou" if p2 > p1 else "diminuiu"
+                            st.success(f"✅ **Mudança Significativa na Proporção!**")
+                            st.write(f'Dado um p-valor de `{p_val:.10f}`, **rejeitamos a hipótese nula** de que as proporções são iguais.')
+                            st.write(f'Isso indica que a presença de **"{alvo}"** **{direcao}** significativamente quando comparamos **{decada_1}** com **{decada_2}**.')
                         else:
-                            st.warning(f"❌ A proporção de **{alvo}** manteve-se estatisticamente estável.")
-
+                            st.warning(f"❌ **Proporção Estável.**")
+                            st.write(f'Dado um p-valor de `{p_val:.4f}`, **falhamos em rejeitar a hipótese nula**.')
+                            st.write(f'Não há evidência estatística de que a proporção de **"{alvo}"** tenha mudado entre **{decada_1}** e **{decada_2}**.')
 
 
