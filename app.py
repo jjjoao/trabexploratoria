@@ -194,20 +194,42 @@ if df is not None:
         with tab4:
             st.header("Popularidade Atual (2020)")
             
-            pop_stats = df_unique.groupby('periodo')['track_popularity'].mean().reset_index()
+            # --- Gráfico de Barras (Década) ---
+            pop_periodo = df_unique.groupby('periodo')['track_popularity'].mean().reset_index()
             
-            fig_pop = px.bar(
-                pop_stats, x='periodo', y='track_popularity',
+            fig_pop_bar = px.bar(
+                pop_periodo, x='periodo', y='track_popularity',
                 color='periodo',
                 color_discrete_sequence=px.colors.sequential.YlOrBr,
                 text_auto='.1f',
-                title="Score Médio de Popularidade"
+                title="Média por Década"
             )
-            fig_pop.update_layout(showlegend=False)
-            st.plotly_chart(fig_pop, use_container_width=True)
+            fig_pop_bar.update_layout(showlegend=False)
+            st.plotly_chart(fig_pop_bar, use_container_width=True)
+
+            st.divider()
+
+            # --- NOVO: Gráfico de Linha (Ano a Ano) ---
+            st.subheader("Evolução Detalhada (Ano a Ano)")
+            
+            pop_ano = df_unique.groupby('year')['track_popularity'].mean().reset_index()
+            
+            fig_pop_line = px.line(
+                pop_ano, x='year', y='track_popularity',
+                title="Trajetória da Popularidade Temporal",
+                markers=True,
+                color_discrete_sequence=['gold']
+            )
+            # Adicionar as linhas verticais para manter consistência com as outras abas
+            fig_pop_line.add_vline(x=2000.5, line_dash="dash", line_color="gray")
+            fig_pop_line.add_vline(x=2010.5, line_dash="dash", line_color="gray")
+            
+            st.plotly_chart(fig_pop_line, use_container_width=True)
+
             st.markdown("""
-            **Análise:**
-            * O pico em **2011-2020** reflete o consumo imediato de hits recentes.
-            * A alta em **1991-2000** demonstra a força dos "Clássicos" que permanecem relevantes.
-            * O vale em **2001-2010** sugere um período de transição com menos músicas retidas na memória coletiva atual.
+            **Análise da Popularidade:**
+            1.  **Efeito "Clássicos" (Anos 90):** Músicas antigas que sobreviveram até hoje tendem a ter alta popularidade.
+            2.  **O "Vale" (2000-2010):** Um período de transição onde as músicas são velhas demais para serem hits atuais, mas novas demais para serem clássicos nostálgicos absolutos.
+            3.  **Recência (2015-2020):** O pico final mostra o consumo natural de músicas lançadas recentemente.
             """)
+
