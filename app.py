@@ -11,13 +11,15 @@ st.set_page_config(
     page_icon="🎵"
 )
 
-# --- 1. Carregamento e Processamento de Dados ---
+# --- FUNÇÕES AUXILIARES ---
+
+# 1. Carregamento e Processamento
 @st.cache_data
 def load_data():
     try:
         df = pd.read_csv("spotify_songs.csv")
     except FileNotFoundError:
-        st.error("Arquivo 'spotify_songs.csv' não encontrado. Por favor, coloque-o na mesma pasta do script.")
+        st.error("Arquivo 'spotify_songs.csv' não encontrado.")
         return None
 
     # Processamento de Data
@@ -36,26 +38,22 @@ def load_data():
 
     df['periodo'] = df['year'].apply(get_period)
     
-    # Filtrar apenas o intervalo desejado
+    # Filtrar intervalo
     df_filtered = df[df['periodo'] != "Outros"].copy()
     
-    # Converter Mode para Categórico (Legível)
+    # Converter Mode para Categórico
     df_filtered['mode_categoria'] = df_filtered['mode'].map({0: 'Menor', 1: 'Maior'})
     
     return df_filtered
 
-# Função auxiliar para teste de proporção (Z-test)
+# 2. Função para Teste de Proporção (Z-test)
 def z_test_proportions(count1, nobs1, count2, nobs2):
-    # Proporções
     p1 = count1 / nobs1
     p2 = count2 / nobs2
-    # Proporção combinada
     p_pool = (count1 + count2) / (nobs1 + nobs2)
-    # Erro padrão
     se = np.sqrt(p_pool * (1 - p_pool) * (1/nobs1 + 1/nobs2))
-    # Estatística Z
+    if se == 0: return 0, 1.0, p1, p2 # Evitar divisão por zero
     z = (p1 - p2) / se
-    # Valor-p (bilateral)
     p_value = 2 * (1 - norm.cdf(abs(z)))
     return z, p_value, p1, p2
 
@@ -68,167 +66,199 @@ st.sidebar.markdown("---")
 st.sidebar.info("Dados extraídos via Spotifyr Package / TidyTuesday.")
 
 if df is not None:
-    # Dataset de músicas únicas
     df_unique = df.drop_duplicates(subset=['track_id'])
 
     # --- PÁGINA 1: APRESENTAÇÃO ---
     if pagina == "🏠 Apresentação":
         st.title("🎵 Evolução Musical no Spotify (1991 - 2020)")
+        
         st.markdown("""
         ### 🎯 Objetivo da Análise
-        Este projeto traça o perfil das músicas mais escutadas nas últimas três décadas.
+        Este projeto tem como objetivo traçar um perfil das músicas mais escutadas no Spotify ao longo das últimas três décadas.
+        A análise busca responder: **O que mudou na música popular?**
         
-        **Nesta aplicação você encontrará:**
-        1.  **Dashboard:** Visualizações gráficas de tendências.
-        2.  **Ferramenta de Teste:** Uma calculadora estatística para validar se as mudanças (médias ou gêneros) são reais ou fruto do acaso.
+        Investigamos mudanças em:
+        * ⏱️ **Duração:** As músicas estão ficando mais curtas?
+        * 🎸 **Gêneros:** Qual estilo dominou cada época?
+        * 🎛️ **Características Técnicas:** A música ficou mais rápida, mais dançante ou mais triste?
+        
+        ---
         """)
-        
-        st.info("Utilize o menu lateral para navegar até o Dashboard.")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.info("### 📂 Sobre o Banco de Dados")
+            st.markdown(f"""
+            * **Total de Registros:** {len(df_unique):,} músicas únicas.
+            * **Período:** De 1991 a 2020.
+            * **Fonte:** API do Spotify.
+            """)
+            
+        with col2:
+            st.warning("### 📖 Dicionário de Variáveis")
+            st.markdown("""
+            * **Danceability:** O quão adequada a música é para dançar.
+            * **Energy:** Medida de intensidade.
+            * **Valence:** Positividade (Alto = Feliz, Baixo = Triste).
+            * **Acousticness:** Se a música é acústica.
+            * **Popularity:** Índice de 0 a 100 (reprodução atual).
+            """)
 
     # --- PÁGINA 2: DASHBOARD ---
     elif pagina == "📊 Dashboard de Análise":
         st.title("📊 Dashboard Analítico")
 
+        # As 5 Abas (4 Originais + 1 Nova)
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📉 Estatísticas Gerais", 
             "🎸 Gêneros", 
             "🎛️ Características de Áudio", 
             "⭐ Popularidade",
-            "🧪 Ferramenta de Testes"
+            "🧪 Teste de Hipótese"
         ])
 
-        # ... (Abas 1 a 4 permanecem iguais ao código anterior) ...
-        # Para economizar espaço na resposta, vou focar na ABA 5 que mudou.
-        # AS ABAS 1, 2, 3 e 4 DO CÓDIGO ANTERIOR DEVEM SER MANTIDAS AQUI.
-        # SE VOCÊ PRECISAR DO CÓDIGO COMPLETO DAS OUTRAS ABAS NOVAMENTE, ME AVISE.
-        # VOU REPETIR APENAS A ESTRUTURA BÁSICA DELAS ABAIXO PARA O CÓDIGO RODAR:
-
+        # --- ABA 1: ESTATÍSTICAS GERAIS ---
         with tab1:
             st.header("Resumo por Década")
-            resumo = df_unique.groupby('periodo').agg({'duration_ms': lambda x: x.mean()/60000, 'energy': 'mean', 'valence': 'mean'}).reset_index()
-            st.dataframe(resumo, use_container_width=True)
-            fig = px.bar(resumo, x='periodo', y='duration_ms', title="Duração Média")
-            st.plotly_chart(fig, use_container_width=True)
-        
+            resumo = df_unique.groupby('periodo').agg({
+                'duration_ms': lambda x: (x.mean() / 60000),
+                'energy': 'mean', 'valence': 'mean', 'danceability': 'mean', 'track_id': 'count'
+            }).reset_index()
+            resumo.columns = ['Período', 'Duração (min)', 'Energia', 'Positividade', 'Dançabilidade', 'Nº Músicas']
+            st.dataframe(resumo.style.format({'Duração (min)': '{:.2f}', 'Energia': '{:.3f}', 'Positividade': '{:.3f}', 'Dançabilidade': '{:.3f}'}), use_container_width=True)
+
+            st.subheader("A Queda na Duração das Músicas")
+            fig_duracao = px.bar(resumo, x='Período', y='Duração (min)', color='Período', text_auto='.2f', title="Duração Média (Minutos) por Década")
+            fig_duracao.update_traces(textposition='outside')
+            st.plotly_chart(fig_duracao, use_container_width=True)
+
+        # --- ABA 2: GÊNEROS ---
         with tab2:
-            st.header("Gêneros")
-            cnt = df.groupby(['periodo', 'playlist_genre']).size().reset_index(name='n')
-            fig = px.bar(cnt, x='periodo', y='n', color='playlist_genre', barmode='fill', title="Distribuição de Gêneros")
-            st.plotly_chart(fig, use_container_width=True)
+            st.header("Dominância de Gêneros")
+            genre_counts = df.groupby(['periodo', 'playlist_genre']).size().reset_index(name='n')
+            genre_counts['total'] = genre_counts.groupby('periodo')['n'].transform('sum')
+            genre_counts['proporcao'] = genre_counts['n'] / genre_counts['total']
+            
+            fig_genre = px.bar(genre_counts, x="periodo", y="proporcao", color="playlist_genre", title="Distribuição de Gêneros (% nas Playlists)", barmode="group")
+            fig_genre.layout.yaxis.tickformat = ',.0%'
+            st.plotly_chart(fig_genre, use_container_width=True)
 
+        # --- ABA 3: ÁUDIO ---
         with tab3:
-            st.header("Áudio")
-            stats = df_unique.groupby('year')[['energy', 'valence']].mean().reset_index()
-            fig = px.line(stats, x='year', y=['energy', 'valence'], title="Evolução Temporal")
-            st.plotly_chart(fig, use_container_width=True)
+            st.header("Tendências de Áudio")
+            yearly_stats = df_unique.groupby('year')[['danceability', 'energy', 'valence', 'acousticness', 'speechiness', 'instrumentalness', 'loudness']].mean().reset_index()
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.subheader("Humor e Ritmo")
+                melted_main = yearly_stats.melt(id_vars='year', value_vars=['danceability', 'energy', 'valence'], var_name='Métrica', value_name='Valor')
+                fig_lines1 = px.line(melted_main, x='year', y='Valor', color='Métrica', color_discrete_map={"danceability": "blue", "energy": "red", "valence": "green"})
+                fig_lines1.add_vline(x=2000.5, line_dash="dash", line_color="gray")
+                fig_lines1.add_vline(x=2010.5, line_dash="dash", line_color="gray")
+                st.plotly_chart(fig_lines1, use_container_width=True)
+            
+            with col_b:
+                st.subheader("Elementos Sonoros")
+                melted_sec = yearly_stats.melt(id_vars='year', value_vars=['acousticness', 'instrumentalness', 'speechiness'], var_name='Métrica', value_name='Valor')
+                fig_lines2 = px.line(melted_sec, x='year', y='Valor', color='Métrica')
+                fig_lines2.add_vline(x=2000.5, line_dash="dash", line_color="gray")
+                fig_lines2.add_vline(x=2010.5, line_dash="dash", line_color="gray")
+                st.plotly_chart(fig_lines2, use_container_width=True)
 
+            st.subheader("Volume (Loudness)")
+            fig_loud = px.line(yearly_stats, x='year', y='loudness', title="Volume Médio (dB)", markers=True)
+            fig_loud.add_vline(x=2000.5, line_dash="dash", line_color="gray")
+            fig_loud.add_vline(x=2010.5, line_dash="dash", line_color="gray")
+            st.plotly_chart(fig_loud, use_container_width=True)
+
+        # --- ABA 4: POPULARIDADE ---
         with tab4:
-            st.header("Popularidade")
-            pop = df_unique.groupby('year')['track_popularity'].mean().reset_index()
-            fig = px.line(pop, x='year', y='track_popularity', title="Popularidade")
-            st.plotly_chart(fig, use_container_width=True)
+            st.header("Popularidade Atual (2020)")
+            
+            # Gráfico de Barras
+            pop_periodo = df_unique.groupby('periodo')['track_popularity'].mean().reset_index()
+            fig_pop_bar = px.bar(pop_periodo, x='periodo', y='track_popularity', color='periodo', color_discrete_sequence=px.colors.sequential.YlOrBr, text_auto='.1f', title="Média por Década")
+            fig_pop_bar.update_layout(showlegend=False)
+            st.plotly_chart(fig_pop_bar, use_container_width=True)
 
-        # --- ABA 5: FERRAMENTA DE TESTES (NOVA IMPLEMENTAÇÃO) ---
-        with tab5:
-            st.header("🧪 Ferramenta de Testes Estatísticos")
-            st.markdown("""
-            Esta ferramenta permite comparar duas décadas para verificar se houve mudanças significativas.
-            * **Variáveis Contínuas:** Usa Teste t de Welch (Comparação de Médias).
-            * **Variáveis Categóricas:** Usa Teste Z de Proporções (Comparação de Frequência).
-            * **Significância (α):** Fixada em 5% (0.05).
-            """)
             st.divider()
 
-            # 1. Escolha do Tipo de Teste
-            tipo_teste = st.radio("O que você quer comparar?", 
-                                ["Variável Numérica (ex: Energia, Duração)", 
-                                 "Variável Categórica (ex: Gênero, Tonalidade)"], horizontal=True)
+            # Gráfico de Linha Temporal
+            st.subheader("Evolução Detalhada (Ano a Ano)")
+            pop_ano = df_unique.groupby('year')['track_popularity'].mean().reset_index()
+            fig_pop_line = px.line(pop_ano, x='year', y='track_popularity', title="Trajetória da Popularidade Temporal", markers=True, color_discrete_sequence=['gold'])
+            fig_pop_line.add_vline(x=2000.5, line_dash="dash", line_color="gray")
+            fig_pop_line.add_vline(x=2010.5, line_dash="dash", line_color="gray")
+            st.plotly_chart(fig_pop_line, use_container_width=True)
+
+        # --- ABA 5: FERRAMENTA DE TESTES (NOVA) ---
+        with tab5:
+            st.header("🧪 Teste de Hipótese (Comparação)")
+            st.markdown("Compare duas décadas para verificar se a diferença é estatisticamente significativa (Significância de 5%).")
+            st.divider()
+
+            tipo_teste = st.radio("Tipo de Variável:", 
+                                ["Numérica (ex: Energia, Duração)", "Categórica (ex: Gênero, Tonalidade)"], 
+                                horizontal=True)
 
             col_a, col_b = st.columns(2)
             decadas = sorted(df_unique['periodo'].unique())
-            
-            with col_a:
-                decada_1 = st.selectbox("Década A (Grupo 1)", decadas, index=0)
-            with col_b:
-                decada_2 = st.selectbox("Década B (Grupo 2)", decadas, index=1)
+            decada_1 = col_a.selectbox("Década A", decadas, index=0)
+            decada_2 = col_b.selectbox("Década B", decadas, index=1)
 
-            # --- LÓGICA DO TESTE ---
             if decada_1 == decada_2:
-                st.error("⚠️ Escolha duas décadas diferentes para comparar.")
-            
+                st.warning("Selecione décadas diferentes.")
             else:
-                # Filtrar dados das décadas
                 df_d1 = df_unique[df_unique['periodo'] == decada_1]
                 df_d2 = df_unique[df_unique['periodo'] == decada_2]
 
-                # CASO 1: NUMÉRICO (Médias)
+                # --- LÓGICA NUMÉRICA (MÉDIAS) ---
                 if "Numérica" in tipo_teste:
                     vars_num = ['danceability', 'energy', 'valence', 'acousticness', 'instrumentalness', 'speechiness', 'track_popularity', 'duration_ms', 'loudness', 'tempo']
-                    variavel = st.selectbox("Escolha a Variável", vars_num)
+                    variavel = st.selectbox("Variável", vars_num)
 
-                    if st.button("🚀 Calcular Teste t"):
-                        # Dados
-                        dados1 = df_d1[variavel].dropna()
-                        dados2 = df_d2[variavel].dropna()
+                    if st.button("Calcular Teste t"):
+                        d1 = df_d1[variavel].dropna()
+                        d2 = df_d2[variavel].dropna()
+                        stat, p_val = ttest_ind(d1, d2, equal_var=False)
                         
-                        # Médias
-                        m1, m2 = dados1.mean(), dados2.mean()
-                        
-                        # Teste t de Welch
-                        stat, p_val = ttest_ind(dados1, dados2, equal_var=False)
-                        
-                        # Resultados
+                        m1, m2 = d1.mean(), d2.mean()
                         col1, col2 = st.columns(2)
                         col1.metric(f"Média {decada_1}", f"{m1:.4f}")
                         col2.metric(f"Média {decada_2}", f"{m2:.4f}", delta=f"{m2-m1:.4f}")
                         
-                        st.markdown("### Interpretação")
-                        st.write(f"**Valor-p:** `{p_val:.10f}`")
-                        
+                        st.markdown(f"**Valor-p:** `{p_val:.10f}`")
                         if p_val < 0.05:
-                            st.success("✅ **Diferença Significativa!**")
-                            maior = decada_1 if m1 > m2 else decada_2
-                            st.write(f"O teste estatístico indica (com 95% de confiança) que a média de **{variavel}** mudou. A década de **{maior}** apresenta valores maiores.")
+                            st.success(f"✅ Diferença Significativa! A média mudou de forma real.")
                         else:
-                            st.warning("❌ **Sem Diferença Significativa.**")
-                            st.write(f"Não há evidências estatísticas suficientes para afirmar que a média de **{variavel}** mudou entre essas décadas. A diferença observada pode ser acaso.")
+                            st.warning("❌ Sem diferença estatística significativa.")
 
-                # CASO 2: CATEGÓRICO (Proporções)
+                # --- LÓGICA CATEGÓRICA (PROPORÇÕES) ---
                 else:
-                    vars_cat = ['playlist_genre', 'playlist_subgenre', 'mode_categoria', 'key']
-                    variavel_cat = st.selectbox("Escolha a Categoria", vars_cat)
-                    
-                    # O usuário precisa escolher qual valor específico ele quer testar (ex: "Rock" dentro de "Genre")
-                    # Usamos o df completo (não unique) para gêneros pois a mesma música pode estar em playlists de gêneros diferentes? 
-                    # O usuário pediu unique antes, vamos manter df_unique para consistência estatística de amostras independentes.
-                    valores_possiveis = sorted(df_unique[variavel_cat].unique().astype(str))
-                    alvo = st.selectbox(f"Qual valor de '{variavel_cat}' você quer testar?", valores_possiveis)
+                    vars_cat = ['playlist_genre', 'playlist_subgenre', 'mode_categoria']
+                    variavel_cat = st.selectbox("Categoria", vars_cat)
+                    # Para gêneros, usamos o dataframe completo (df) pois a playlist define o gênero
+                    # Para Mode, usamos df_unique. Vamos usar df_unique por padrão para consistência.
+                    valores = sorted(df_unique[variavel_cat].dropna().unique().astype(str))
+                    alvo = st.selectbox(f"Valor a testar em '{variavel_cat}'", valores)
 
-                    if st.button("🚀 Calcular Teste de Proporção"):
-                        # Contagens
-                        total1 = len(df_d1)
+                    if st.button("Calcular Teste de Proporção"):
                         count1 = len(df_d1[df_d1[variavel_cat].astype(str) == alvo])
-                        
-                        total2 = len(df_d2)
+                        total1 = len(df_d1)
                         count2 = len(df_d2[df_d2[variavel_cat].astype(str) == alvo])
-                        
-                        # Teste Z
-                        z_stat, p_val, prop1, prop2 = z_test_proportions(count1, total1, count2, total2)
-                        
-                        # Resultados Visual
+                        total2 = len(df_d2)
+
+                        z_stat, p_val, p1, p2 = z_test_proportions(count1, total1, count2, total2)
+
                         col1, col2 = st.columns(2)
-                        col1.metric(f"% em {decada_1}", f"{prop1:.2%}", help=f"{count1} músicas de {total1}")
-                        col2.metric(f"% em {decada_2}", f"{prop2:.2%}", delta=f"{(prop2-prop1)*100:.2f} p.p.")
+                        col1.metric(f"% em {decada_1}", f"{p1:.2%}", help=f"{count1}/{total1}")
+                        col2.metric(f"% em {decada_2}", f"{p2:.2%}", delta=f"{(p2-p1)*100:.2f} p.p.")
                         
-                        st.markdown("### Interpretação")
-                        st.write(f"**Valor-p:** `{p_val:.10f}`")
-                        
+                        st.markdown(f"**Valor-p:** `{p_val:.10f}`")
                         if p_val < 0.05:
-                            st.success("✅ **Mudança Significativa na Proporção!**")
-                            tendencia = "aumentou" if prop2 > prop1 else "diminuiu"
-                            st.write(f"Com 95% de confiança, podemos afirmar que a presença de **'{alvo}'** {tendencia} significativamente de {decada_1} para {decada_2}.")
+                            tendencia = "aumentou" if p2 > p1 else "diminuiu"
+                            st.success(f"✅ Mudança Significativa! A proporção de **{alvo}** {tendencia}.")
                         else:
-                            st.warning("❌ **Proporção Estável.**")
-                            st.write(f"A variação na porcentagem de **'{alvo}'** entre as décadas não é estatisticamente relevante.")
+                            st.warning(f"❌ A proporção de **{alvo}** manteve-se estatisticamente estável.")
 
 
