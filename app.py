@@ -182,4 +182,32 @@ if df is not None:
                 )
                 fig_lines2.add_vline(x=2000.5, line_dash="dash", line_color="gray")
                 fig_lines2.add_vline(x=2010.5, line_dash="dash", line_color="gray")
-                st.plotly_
+                st.plotly_chart(fig_lines2, use_container_width=True)
+
+            st.subheader("Guerra do Volume (Loudness)")
+            fig_loud = px.line(yearly_stats, x='year', y='loudness', title="Volume Médio (dB)", markers=True)
+            fig_loud.add_vline(x=2000.5, line_dash="dash", line_color="gray")
+            fig_loud.add_vline(x=2010.5, line_dash="dash", line_color="gray")
+            st.plotly_chart(fig_loud, use_container_width=True)
+
+        # --- ABA 4: POPULARIDADE ---
+        with tab4:
+            st.header("Popularidade Atual (2020)")
+            
+            pop_stats = df_unique.groupby('periodo')['track_popularity'].mean().reset_index()
+            
+            fig_pop = px.bar(
+                pop_stats, x='periodo', y='track_popularity',
+                color='periodo',
+                color_discrete_sequence=px.colors.sequential.YlOrBr,
+                text_auto='.1f',
+                title="Score Médio de Popularidade"
+            )
+            fig_pop.update_layout(showlegend=False)
+            st.plotly_chart(fig_pop, use_container_width=True)
+            st.markdown("""
+            **Análise:**
+            * O pico em **2011-2020** reflete o consumo imediato de hits recentes.
+            * A alta em **1991-2000** demonstra a força dos "Clássicos" que permanecem relevantes.
+            * O vale em **2001-2010** sugere um período de transição com menos músicas retidas na memória coletiva atual.
+            """)
