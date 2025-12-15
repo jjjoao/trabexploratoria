@@ -193,12 +193,12 @@ if df is not None:
 
         # --- ABA 5: FERRAMENTA DE TESTES (NOVA) ---
         with tab5:
-            st.header("🧪 Teste de Hipótese (Comparação)")
+            st.header("🧪 Teste de Hipótese")
             st.markdown("Compare duas décadas para verificar se a diferença é estatisticamente significativa (Significância de 5%).")
             st.divider()
 
             tipo_teste = st.radio("Tipo de Variável:", 
-                                ["Numérica (ex: Energia, Duração)", "Categórica (ex: Gênero, Tonalidade)"], 
+                                ["Numérica", "Categórica"], 
                                 horizontal=True)
 
             col_a, col_b = st.columns(2)
@@ -260,5 +260,6 @@ if df is not None:
                             st.success(f"✅ Mudança Significativa! A proporção de **{alvo}** {tendencia}.")
                         else:
                             st.warning(f"❌ A proporção de **{alvo}** manteve-se estatisticamente estável.")
+
 
 
