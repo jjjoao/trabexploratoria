@@ -58,22 +58,31 @@ st.sidebar.info("Dados extraídos via Spotifyr Package / TidyTuesday.")
 if df is not None:
     df_unique = df.drop_duplicates(subset=['track_id'])
 
-    # === PÁGINA 1: APRESENTAÇÃO ===
+    # === PÁGINA 1: APRESENTAÇÃO (COM LOGO) ===
     if pagina == "🏠 Apresentação":
         st.title("🎵 Evolução Musical no Spotify (1991 - 2020)")
         
-        st.markdown("""
-        ### 🎯 Objetivo da Análise
-        Este projeto tem como objetivo traçar um perfil das músicas mais escutadas no Spotify ao longo das últimas três décadas.
-        A análise busca responder: **O que mudou na música popular?**
+        # Layout com colunas para incluir a logo
+        col_hero1, col_hero2 = st.columns([3, 1])
         
-        Investigamos mudanças em:
-        * ⏱️ **Duração:** As músicas estão ficando mais curtas?
-        * 🎸 **Gêneros:** Qual estilo dominou cada época?
-        * 🎛️ **Características Técnicas:** A música ficou mais rápida, mais dançante ou mais triste?
+        with col_hero1:
+            st.markdown("""
+            ### 🎯 Objetivo da Análise
+            Este projeto tem como objetivo traçar um perfil das músicas mais escutadas no Spotify ao longo das últimas três décadas.
+            A análise busca responder: **O que mudou na música popular?**
+            
+            Investigamos mudanças em:
+            * ⏱️ **Duração:** As músicas estão ficando mais curtas?
+            * 🎸 **Gêneros:** Qual estilo dominou cada época?
+            * 🎛️ **Características Técnicas:** A música ficou mais rápida, mais dançante ou mais triste?
+            """)
+            st.info("👈 **Use a barra lateral** para navegar até o Dashboard Analítico.")
+
+        with col_hero2:
+            # Logo do Spotify
+            st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/1024px-Spotify_logo_without_text.svg.png", width=150)
         
-        ---
-        """)
+        st.divider()
 
         st.warning("### 📖 Dicionário de Variáveis do Banco de Dados")
         st.markdown("""
@@ -133,14 +142,13 @@ if df is not None:
             fig_genre.layout.yaxis.tickformat = ',.0%'
             st.plotly_chart(fig_genre, use_container_width=True)
 
-        # --- ABA 3: ÁUDIO (ATUALIZADA) ---
+        # --- ABA 3: ÁUDIO ---
         with tab3:
             st.header("Tendências de Áudio")
             
-            # Layout em duas colunas: Radar à esquerda, Linhas à direita
             col_radar, col_line = st.columns([1, 1])
             
-            # --- COLUNA 1: PERFIL SONORO (RADAR CHART) ---
+            # Radar Chart
             with col_radar:
                 st.subheader("📸 Perfil Sonoro (Radar)")
                 st.markdown("Compare a 'forma' das décadas nas variáveis de 0 a 1.")
@@ -149,8 +157,6 @@ if df is not None:
                 radar_df = df_unique.groupby('periodo')[features_radar].mean().reset_index()
                 
                 fig_radar = go.Figure()
-                
-                # Cores fixas para cada década para manter consistência
                 colors = ['#636EFA', '#EF553B', '#00CC96'] 
                 
                 for i, row in radar_df.iterrows():
@@ -169,19 +175,17 @@ if df is not None:
                 )
                 st.plotly_chart(fig_radar, use_container_width=True)
 
-            # --- COLUNA 2: EVOLUÇÃO TEMPORAL INTERATIVA ---
+            # Evolução Temporal Interativa
             with col_line:
                 st.subheader("📈 Evolução Temporal Interativa")
                 st.markdown("Selecione quais variáveis você quer visualizar no tempo.")
                 
-                # Todas as variáveis numéricas possíveis
                 all_metrics = ['danceability', 'energy', 'valence', 'acousticness', 'instrumentalness', 'speechiness', 'loudness']
                 
-                # Multiselect para o usuário escolher
                 metrics_selected = st.multiselect(
                     "Escolha as variáveis:", 
                     all_metrics, 
-                    default=['energy', 'valence'] # Padrão inicial
+                    default=['energy', 'valence']
                 )
                 
                 if metrics_selected:
@@ -193,7 +197,6 @@ if df is not None:
                         markers=True,
                         title="Evolução Ano a Ano"
                     )
-                    # Adicionar linhas verticais
                     fig_line.add_vline(x=2000.5, line_dash="dash", line_color="gray")
                     fig_line.add_vline(x=2010.5, line_dash="dash", line_color="gray")
                     
@@ -201,12 +204,20 @@ if df is not None:
                 else:
                     st.info("Selecione pelo menos uma variável acima para gerar o gráfico.")
 
-        # --- ABA 4: POPULARIDADE ---
+        # --- ABA 4: POPULARIDADE (CORES AJUSTADAS) ---
         with tab4:
             st.header("Popularidade Atual (2020)")
             
             pop_periodo = df_unique.groupby('periodo')['track_popularity'].mean().reset_index()
-            fig_pop_bar = px.bar(pop_periodo, x='periodo', y='track_popularity', color='periodo', color_discrete_sequence=px.colors.sequential.YlOrBr, text_auto='.1f', title="Média por Década")
+            
+            # USANDO CORES DE ALTO CONTRASTE (Plotly Bold)
+            fig_pop_bar = px.bar(
+                pop_periodo, x='periodo', y='track_popularity', 
+                color='periodo', 
+                color_discrete_sequence=px.colors.qualitative.Bold, # Cores fortes e distintas
+                text_auto='.1f', 
+                title="Média por Década (Cores de Alto Contraste)"
+            )
             fig_pop_bar.update_layout(showlegend=False)
             st.plotly_chart(fig_pop_bar, use_container_width=True)
 
