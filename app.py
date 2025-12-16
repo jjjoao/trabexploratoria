@@ -71,10 +71,7 @@ if df is not None:
             Este projeto tem como objetivo traçar um perfil das músicas mais escutadas no Spotify ao longo das últimas três décadas.
             A análise busca responder: **O que mudou na música popular?**
             
-            Investigamos mudanças em:
-            * ⏱️ **Duração:** As músicas estão ficando mais curtas?
-            * 🎸 **Gêneros:** Qual estilo dominou cada época?
-            * 🎛️ **Características Técnicas:** A música ficou mais rápida, mais dançante ou mais triste?
+            O foco da análise foi avaliar as mudanças no perfil médio das músicas por decada.
             """)
             st.info("👈 **Use a barra lateral** para navegar até o Dashboard Analítico.")
 
@@ -308,3 +305,4 @@ if df is not None:
                             st.warning(f"❌ **Proporção Estável.**")
                             st.write(f'Dado um p-valor de `{p_val:.4f}`, **falhamos em rejeitar a hipótese nula**.')
                             st.write(f'Não há evidência estatística de que a proporção de **"{alvo}"** tenha mudado entre **{decada_1}** e **{decada_2}**.')
+
