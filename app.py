@@ -135,7 +135,7 @@ if df is not None:
             genre_counts['total'] = genre_counts.groupby('periodo')['n'].transform('sum')
             genre_counts['proporcao'] = genre_counts['n'] / genre_counts['total']
             
-            fig_genre = px.bar(genre_counts, x="periodo", y="proporcao", color="playlist_genre", title="Distribuição de Gêneros (% nas Playlists)", barmode="group")
+            fig_genre = px.bar(genre_counts, x="periodo", y="proporcao", color="playlist_genre", title="Distribuição de Gêneros", barmode="group")
             fig_genre.layout.yaxis.tickformat = ',.0%'
             st.plotly_chart(fig_genre, use_container_width=True)
 
@@ -147,7 +147,7 @@ if df is not None:
             
             # Radar Chart
             with col_radar:
-                st.subheader("📸 Perfil Sonoro (Radar)")
+                st.subheader("📸 Perfil Sonoro")
                 st.markdown("Compare a 'forma' das décadas nas variáveis de 0 a 1.")
                 
                 features_radar = ['danceability', 'energy', 'valence', 'acousticness', 'instrumentalness', 'speechiness']
@@ -213,14 +213,14 @@ if df is not None:
                 color='periodo', 
                 color_discrete_sequence=px.colors.qualitative.Bold, # Cores fortes e distintas
                 text_auto='.1f', 
-                title="Média por Década (Cores de Alto Contraste)"
+                title="Média por Década"
             )
             fig_pop_bar.update_layout(showlegend=False)
             st.plotly_chart(fig_pop_bar, use_container_width=True)
 
             st.divider()
 
-            st.subheader("Evolução Detalhada (Ano a Ano)")
+            st.subheader("Evolução Detalhada")
             pop_ano = df_unique.groupby('year')['track_popularity'].mean().reset_index()
             fig_pop_line = px.line(pop_ano, x='year', y='track_popularity', title="Trajetória da Popularidade Temporal", markers=True, color_discrete_sequence=['gold'])
             fig_pop_line.add_vline(x=2000.5, line_dash="dash", line_color="gray")
@@ -229,7 +229,7 @@ if df is not None:
 
         # --- ABA 5: FERRAMENTA DE TESTES ---
         with tab5:
-            st.header("🧪 Teste de Hipótese (Comparação)")
+            st.header("🧪 Teste de Hipótese")
             st.markdown("Compare duas décadas para verificar se a diferença é estatisticamente significativa (Significância de 5%).")
             st.divider()
 
@@ -305,4 +305,5 @@ if df is not None:
                             st.warning(f"❌ **Proporção Estável.**")
                             st.write(f'Dado um p-valor de `{p_val:.4f}`, **falhamos em rejeitar a hipótese nula**.')
                             st.write(f'Não há evidência estatística de que a proporção de **"{alvo}"** tenha mudado entre **{decada_1}** e **{decada_2}**.')
+
 
