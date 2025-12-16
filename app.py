@@ -118,7 +118,7 @@ if df is not None:
 
         # --- ABA 1: DURAÇÃO (Alterada conforme pedido) ---
         with tab1:
-            st.header("Análise de Duração")
+            st.header("Resumo Geral")
             
             # Tabela de Resumo (Mantida pois dá contexto numérico)
             resumo = df_unique.groupby('periodo').agg({
@@ -295,3 +295,4 @@ if df is not None:
                             st.warning(f"❌ **Proporção Estável.**")
                             st.write(f'Dado um p-valor de `{p_val:.4f}`, **falhamos em rejeitar a hipótese nula**.')
                             st.write(f'Não há evidência estatística de que a proporção de **"{alvo}"** tenha mudado entre **{decada_1}** e **{decada_2}**.')
+
