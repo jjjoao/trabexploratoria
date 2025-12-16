@@ -107,26 +107,31 @@ if df is not None:
     elif pagina == "📊 Dashboard de Análise":
         st.title("📊 Dashboard Analítico")
 
-        # As 5 Abas
+        # As 5 Abas (Nome da primeira aba alterado)
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
-            "📉 Estatísticas Gerais", 
+            "⏱️ Duração das Músicas", 
             "🎸 Gêneros", 
             "🎛️ Características de Áudio", 
             "⭐ Popularidade",
             "🧪 Teste de Hipótese"
         ])
 
-        # --- ABA 1: ESTATÍSTICAS GERAIS ---
+        # --- ABA 1: DURAÇÃO (Alterada conforme pedido) ---
         with tab1:
-            st.header("Resumo por Década")
+            st.header("Análise de Duração")
+            
+            # Tabela de Resumo (Mantida pois dá contexto numérico)
             resumo = df_unique.groupby('periodo').agg({
                 'duration_ms': lambda x: (x.mean() / 60000),
                 'energy': 'mean', 'valence': 'mean', 'danceability': 'mean', 'track_id': 'count'
             }).reset_index()
             resumo.columns = ['Período', 'Duração (min)', 'Energia', 'Positividade', 'Dançabilidade', 'Nº Músicas']
+            
             st.dataframe(resumo.style.format({'Duração (min)': '{:.2f}', 'Energia': '{:.3f}', 'Positividade': '{:.3f}', 'Dançabilidade': '{:.3f}'}), use_container_width=True)
 
             st.subheader("A Queda na Duração das Músicas")
+            st.markdown("O gráfico abaixo evidencia a redução no tempo médio das faixas ao longo das décadas.")
+            
             fig_duracao = px.bar(resumo, x='Período', y='Duração (min)', color='Período', text_auto='.2f', title="Duração Média (Minutos) por Década")
             fig_duracao.update_traces(textposition='outside')
             st.plotly_chart(fig_duracao, use_container_width=True)
@@ -190,7 +195,7 @@ if df is not None:
             fig_pop_line.add_vline(x=2010.5, line_dash="dash", line_color="gray")
             st.plotly_chart(fig_pop_line, use_container_width=True)
 
-        # --- ABA 5: FERRAMENTA DE TESTES (ATUALIZADA) ---
+        # --- ABA 5: FERRAMENTA DE TESTES ---
         with tab5:
             st.header("🧪 Teste de Hipótese (Comparação)")
             st.markdown("Compare duas décadas para verificar se a diferença é estatisticamente significativa (Significância de 5%).")
@@ -290,5 +295,3 @@ if df is not None:
                             st.warning(f"❌ **Proporção Estável.**")
                             st.write(f'Dado um p-valor de `{p_val:.4f}`, **falhamos em rejeitar a hipótese nula**.')
                             st.write(f'Não há evidência estatística de que a proporção de **"{alvo}"** tenha mudado entre **{decada_1}** e **{decada_2}**.')
-
-
